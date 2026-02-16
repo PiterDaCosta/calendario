@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly View - Task Calendar{% endblock %}
+
+{% block content %}
+<div class="month-view">
+    <div class="view-header">
+        <button class="btn btn-icon" onclick="navigateMonth(-1)" title="Previous Month">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <h2 id="monthTitle">Loading...</h2>
+        <button class="btn btn-icon" onclick="navigateMonth(1)" title="Next Month">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button class="btn btn-secondary" onclick="goToCurrentMonth()">This Month</button>
+        <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
+    </div>
+
+    <div class="month-grid-header">
+        <div class="weekday-name">Mon</div>
+        <div class="weekday-name">Tue</div>
+        <div class="weekday-name">Wed</div>
+        <div class="weekday-name">Thu</div>
+        <div class="weekday-name">Fri</div>
+        <div class="weekday-name weekend">Sat</div>
+        <div class="weekday-name weekend">Sun</div>
+    </div>
+
+    <div class="month-grid" id="monthGrid">
+        <!-- Days will be populated by JavaScript -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth() + 1;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        window.refreshCurrentView = loadMonthData;
+        loadMonthData();
+    });
+    
+    function loadMonthData() {
+        fetch(`/api/calendar/month?year=${currentYear}&month=${currentMonth}`)
+            .then(response => response.json())
+            .then(data => {
+                renderMonth(data);
+            })
+            .catch(error => console.error('Error loading month data:', error));
+    }
+    
+    function renderMonth(data) {
+        const monthTitle = document.getElementById('monthTitle');
+        monthTitle.textContent = `${data.month_name} ${data.year}`;
+        
+        const monthGrid = document.getElementById('monthGrid');
+        monthGrid.innerHTML = '';
+        
+        // Calculate padding for start of month
+        const firstDay = new Date(data.first_day);
+        let startPadding = firstDay.getDay() - 1; // Monday = 0
+        if (startPadding < 0) startPadding = 6; // Sunday
+        
+        // Add empty cells for padding
+        for (let i = 0; i < startPadding; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'day-cell empty';
+            monthGrid.appendChild(emptyCell);
+        }
+        
+        const today = new Date();
+        
+        // Add day cells
+        data.days.forEach(day => {
+            const dayDate = new Date(day.date);
+            const isToday = isSameDay(dayDate, today);
+            const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
+            
+            const dayCell = document.createElement('div');
+            dayCell.className = `day-cell ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}`;
+            dayCell.onclick = (e) => {
+                if (e.target === dayCell || e.target.classList.contains('day-number')) {
+                    openAddTaskModal(day.date);
+                }
+            };
+            
+            const tasksHtml = day.tasks.slice(0, 3).map(task => {
+                const completedClass = task.is_completed ? 'completed' : '';
+                return `
+                    <div class="task-mini ${completedClass}" onclick="event.stopPropagation(); openEditTaskModal(${task.id})">
+                        <span class="priority-dot priority-${task.priority}"></span>
+                        <span class="task-mini-title">${escapeHtml(task.title)}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            const moreCount = day.tasks.length - 3;
+            const moreHtml = moreCount > 0 ? `<div class="tasks-more">+${moreCount} more</div>` : '';
+            
+            dayCell.innerHTML = `
+                <div class="day-number">${day.day}</div>
+                <div class="day-tasks-mini">
+                    ${tasksHtml}
+                    ${moreHtml}
+                </div>
+            `;
+            
+            monthGrid.appendChild(dayCell);
+        });
+    }
+    
+    function navigateMonth(direction) {
+        currentMonth += direction;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        } else if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        loadMonthData();
+    }
+    
+    function goToCurrentMonth() {
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth() + 1;
+        loadMonthData();
+    }
+    
+    function openAddTaskModal(date) {
+        document.getElementById('modalTitle').textContent = 'Add Task';
+        document.getElementById('taskId').value = '';
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskDate').value = date || new Date().toISOString().split('T')[0];
+        document.getElementById('taskTime').value = '';
+        document.getElementById('taskPriority').value = '2';
+        document.getElementById('taskModal').classList.add('active');
+    }
+    
+    function isSameDay(date1, date2) {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    }
+</script>
+{% endblock %}

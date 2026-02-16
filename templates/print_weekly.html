@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Tasks - Print</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+</head>
+<body class="print-page">
+    <div class="print-header">
+        <h1>Weekly Tasks</h1>
+        <h2 id="weekTitle">Loading...</h2>
+    </div>
+
+    <div class="print-week-grid" id="weekGrid">
+        <!-- Days will be populated by JavaScript -->
+    </div>
+
+    <div class="print-footer">
+        <p>Generated on <span id="generatedDate"></span></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dateParam = urlParams.get('date') || new Date().toISOString().split('T')[0];
+            
+            document.getElementById('generatedDate').textContent = new Date().toLocaleDateString();
+            
+            fetch(`/api/calendar/week?date=${dateParam}`)
+                .then(response => response.json())
+                .then(data => {
+                    const startDate = new Date(data.start_date);
+                    const endDate = new Date(data.end_date);
+                    
+                    document.getElementById('weekTitle').textContent = 
+                        `${formatDate(startDate)} - ${formatDate(endDate)}`;
+                    
+                    const weekGrid = document.getElementById('weekGrid');
+                    weekGrid.innerHTML = data.days.map(day => {
+                        const dayDate = new Date(day.date);
+                        return `
+                            <div class="print-day">
+                                <div class="print-day-header">
+                                    <span class="day-name">${day.day_name}</span>
+                                    <span class="day-date">${dayDate.getDate()}</span>
+                                </div>
+                                <div class="print-tasks">
+                                    ${day.tasks.length === 0 ? '<div class="no-tasks">No tasks</div>' :
+                                        day.tasks.map(task => `
+                                            <div class="print-task ${task.is_completed ? 'completed' : ''}">
+                                                <span class="checkbox">${task.is_completed ? '☑' : '☐'}</span>
+                                                <span class="task-title">${escapeHtml(task.title)}</span>
+                                                ${task.due_time ? `<span class="task-time">${task.due_time.slice(0, 5)}</span>` : ''}
+                                            </div>
+                                        `).join('')
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Auto-print after loading
+                    setTimeout(() => window.print(), 500);
+                });
+            
+            function formatDate(date) {
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        });
+    </script>
+</body>
+</html>

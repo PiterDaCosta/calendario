@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>{% block title %}Task Calendar{% endblock %}</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="/">Task Calendar</a>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="{% if request.endpoint == 'main.index' %}active{% endif %}">Weekly</a>
+            <a href="/monthly" class="{% if request.endpoint == 'main.monthly_view' %}active{% endif %}">Monthly</a>
+            <a href="/templates" class="{% if request.endpoint == 'main.templates_view' %}active{% endif %}">Recurring Tasks</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn btn-icon" onclick="window.print()" title="Print">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            </button>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add Task</h3>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="taskForm" onsubmit="saveTask(event)">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <label for="taskTitle">Title *</label>
+                    <input type="text" id="taskTitle" required placeholder="Enter task title">
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Description</label>
+                    <textarea id="taskDescription" placeholder="Enter description (optional)"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDate">Due Date *</label>
+                        <input type="date" id="taskDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskTime">Time</label>
+                        <input type="time" id="taskTime">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="taskPriority">Priority</label>
+                    <select id="taskPriority">
+                        <option value="1">High</option>
+                        <option value="2" selected>Medium</option>
+                        <option value="3">Low</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

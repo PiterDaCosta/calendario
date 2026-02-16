@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly View - Task Calendar{% endblock %}
+
+{% block content %}
+<div class="week-view">
+    <div class="view-header">
+        <button class="btn btn-icon" onclick="navigateWeek(-1)" title="Previous Week">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <h2 id="weekTitle">Loading...</h2>
+        <button class="btn btn-icon" onclick="navigateWeek(1)" title="Next Week">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button class="btn btn-secondary" onclick="goToToday()">Today</button>
+        <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
+    </div>
+
+    <div class="week-grid" id="weekGrid">
+        <!-- Days will be populated by JavaScript -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentDate = new Date();
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        window.refreshCurrentView = loadWeekData;
+        loadWeekData();
+    });
+    
+    function loadWeekData() {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        fetch(`/api/calendar/week?date=${dateStr}`)
+            .then(response => response.json())
+            .then(data => {
+                renderWeek(data);
+            })
+            .catch(error => console.error('Error loading week data:', error));
+    }
+    
+    function renderWeek(data) {
+        const weekTitle = document.getElementById('weekTitle');
+        const startDate = new Date(data.start_date);
+        const endDate = new Date(data.end_date);
+        
+        weekTitle.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+        
+        const weekGrid = document.getElementById('weekGrid');
+        weekGrid.innerHTML = '';
+        
+        data.days.forEach(day => {
+            const dayDate = new Date(day.date);
+            const isToday = isSameDay(dayDate, new Date());
+            
+            const dayEl = document.createElement('div');
+            dayEl.className = `day-column ${isToday ? 'today' : ''}`;
+            
+            dayEl.innerHTML = `
+                <div class="day-header">
+                    <span class="day-name">${day.day_name}</span>
+                    <span class="day-date">${dayDate.getDate()}</span>
+                </div>
+                <div class="day-tasks" data-date="${day.date}">
+                    ${day.tasks.map(task => renderTask(task)).join('')}
+                </div>
+                <button class="btn-add-task" onclick="openAddTaskModal('${day.date}')">+ Add</button>
+            `;
+            
+            weekGrid.appendChild(dayEl);
+        });
+    }
+    
+    function renderTask(task) {
+        const priorityClass = `priority-${task.priority}`;
+        const completedClass = task.is_completed ? 'completed' : '';
+        const timeStr = task.due_time ? `<span class="task-time">${task.due_time.slice(0, 5)}</span>` : '';
+        
+        return `
+            <div class="task-item ${priorityClass} ${completedClass}" data-id="${task.id}">
+                <label class="checkbox-container">
+                    <input type="checkbox" ${task.is_completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                    <span class="checkmark"></span>
+                </label>
+                <div class="task-content" onclick="openEditTaskModal(${task.id})">
+                    ${timeStr}
+                    <span class="task-title">${escapeHtml(task.title)}</span>
+                </div>
+                <button class="btn-delete" onclick="deleteTask(${task.id})" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        `;
+    }
+    
+    function navigateWeek(direction) {
+        currentDate.setDate(currentDate.getDate() + (direction * 7));
+        loadWeekData();
+    }
+    
+    function goToToday() {
+        currentDate = new Date();
+        loadWeekData();
+    }
+    
+    function openAddTaskModal(date) {
+        document.getElementById('modalTitle').textContent = 'Add Task';
+        document.getElementById('taskId').value = '';
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskDate').value = date || new Date().toISOString().split('T')[0];
+        document.getElementById('taskTime').value = '';
+        document.getElementById('taskPriority').value = '2';
+        document.getElementById('taskModal').classList.add('active');
+    }
+    
+    function formatDate(date) {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    function isSameDay(date1, date2) {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    }
+</script>
+{% endblock %}

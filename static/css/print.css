@@ -1,0 +1,233 @@
+/* Print-Specific Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body.print-page {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: white;
+    color: #111;
+    padding: 1rem;
+    font-size: 12pt;
+}
+
+.print-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #333;
+}
+
+.print-header h1 {
+    font-size: 18pt;
+    margin-bottom: 0.5rem;
+}
+
+.print-header h2 {
+    font-size: 14pt;
+    font-weight: normal;
+    color: #555;
+}
+
+/* Weekly Print */
+.print-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+}
+
+.print-day {
+    border: 1px solid #ddd;
+    min-height: 120px;
+    page-break-inside: avoid;
+}
+
+.print-day-header {
+    background: #f5f5f5;
+    padding: 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.print-day-header .day-name {
+    display: block;
+    font-size: 9pt;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.print-day-header .day-date {
+    display: block;
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+.print-tasks {
+    padding: 0.5rem;
+}
+
+.print-task {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 9pt;
+    border-bottom: 1px dotted #eee;
+}
+
+.print-task:last-child {
+    border-bottom: none;
+}
+
+.print-task.completed {
+    color: #999;
+}
+
+.print-task.completed .task-title {
+    text-decoration: line-through;
+}
+
+.print-task .checkbox {
+    font-size: 12pt;
+    line-height: 1;
+}
+
+.print-task .task-title {
+    flex: 1;
+}
+
+.print-task .task-time {
+    color: #666;
+    font-size: 8pt;
+}
+
+.no-tasks {
+    color: #999;
+    font-style: italic;
+    font-size: 9pt;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+/* Monthly Print */
+.print-monthly .print-month-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.print-monthly .weekday {
+    text-align: center;
+    font-weight: bold;
+    font-size: 9pt;
+    padding: 0.5rem;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+}
+
+.print-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+}
+
+.print-day-cell {
+    border: 1px solid #ddd;
+    min-height: 80px;
+    padding: 0.25rem;
+    page-break-inside: avoid;
+}
+
+.print-day-cell.empty {
+    background: #fafafa;
+    border-color: #eee;
+}
+
+.print-day-cell .day-number {
+    font-weight: bold;
+    font-size: 10pt;
+    margin-bottom: 0.25rem;
+}
+
+.print-day-cell .day-tasks {
+    font-size: 7pt;
+}
+
+.print-day-cell .task-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-bottom: 0.15rem;
+    line-height: 1.3;
+}
+
+.print-day-cell .task-line.completed {
+    color: #999;
+}
+
+.print-day-cell .task-line.completed .task-text {
+    text-decoration: line-through;
+}
+
+.print-day-cell .checkbox {
+    font-size: 9pt;
+}
+
+.print-day-cell .task-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Footer */
+.print-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    font-size: 9pt;
+    color: #666;
+}
+
+/* Print Media Query */
+@media print {
+    body.print-page {
+        padding: 0;
+    }
+    
+    .print-week-grid {
+        page-break-inside: avoid;
+    }
+    
+    .print-day,
+    .print-day-cell {
+        page-break-inside: avoid;
+    }
+    
+    @page {
+        size: landscape;
+        margin: 1cm;
+    }
+}
+
+/* Screen Preview */
+@media screen {
+    body.print-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: #f5f5f5;
+    }
+    
+    .print-header,
+    .print-week-grid,
+    .print-month-header,
+    .print-month-grid,
+    .print-footer {
+        background: white;
+        padding: 1rem;
+    }
+}

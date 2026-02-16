@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Tasks - Print</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+</head>
+<body class="print-page print-monthly">
+    <div class="print-header">
+        <h1>Monthly Tasks</h1>
+        <h2 id="monthTitle">Loading...</h2>
+    </div>
+
+    <div class="print-month-header">
+        <div class="weekday">Mon</div>
+        <div class="weekday">Tue</div>
+        <div class="weekday">Wed</div>
+        <div class="weekday">Thu</div>
+        <div class="weekday">Fri</div>
+        <div class="weekday">Sat</div>
+        <div class="weekday">Sun</div>
+    </div>
+
+    <div class="print-month-grid" id="monthGrid">
+        <!-- Days will be populated by JavaScript -->
+    </div>
+
+    <div class="print-footer">
+        <p>Generated on <span id="generatedDate"></span></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const year = parseInt(urlParams.get('year')) || new Date().getFullYear();
+            const month = parseInt(urlParams.get('month')) || (new Date().getMonth() + 1);
+            
+            document.getElementById('generatedDate').textContent = new Date().toLocaleDateString();
+            
+            fetch(`/api/calendar/month?year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('monthTitle').textContent = `${data.month_name} ${data.year}`;
+                    
+                    const monthGrid = document.getElementById('monthGrid');
+                    
+                    // Calculate padding for start of month
+                    const firstDay = new Date(data.first_day);
+                    let startPadding = firstDay.getDay() - 1;
+                    if (startPadding < 0) startPadding = 6;
+                    
+                    let html = '';
+                    
+                    // Add empty cells for padding
+                    for (let i = 0; i < startPadding; i++) {
+                        html += '<div class="print-day-cell empty"></div>';
+                    }
+                    
+                    // Add day cells
+                    data.days.forEach(day => {
+                        html += `
+                            <div class="print-day-cell">
+                                <div class="day-number">${day.day}</div>
+                                <div class="day-tasks">
+                                    ${day.tasks.map(task => `
+                                        <div class="task-line ${task.is_completed ? 'completed' : ''}">
+                                            <span class="checkbox">${task.is_completed ? '☑' : '☐'}</span>
+                                            <span class="task-text">${escapeHtml(task.title)}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    monthGrid.innerHTML = html;
+                    
+                    // Auto-print after loading
+                    setTimeout(() => window.print(), 500);
+                });
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        });
+    </script>
+</body>
+</html>

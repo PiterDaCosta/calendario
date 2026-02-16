@@ -59,7 +59,7 @@
         monthGrid.innerHTML = '';
         
         // Calculate padding for start of month
-        const firstDay = new Date(data.first_day);
+        const firstDay = parseISODate(data.first_day);
         let startPadding = firstDay.getDay() - 1; // Monday = 0
         if (startPadding < 0) startPadding = 6; // Sunday
         
@@ -74,7 +74,7 @@
         
         // Add day cells
         data.days.forEach(day => {
-            const dayDate = new Date(day.date);
+            const dayDate = parseISODate(day.date);
             const isToday = isSameDay(dayDate, today);
             const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
             

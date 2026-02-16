@@ -25,6 +25,12 @@ function isSameDay(date1, date2) {
            date1.getDate() === date2.getDate();
 }
 
+// Timezone-safe date parsing for ISO date strings
+function parseISODate(dateString) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+}
+
 // ============ Modal Functions ============
 
 function closeModal() {

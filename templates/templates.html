@@ -66,6 +66,14 @@
                 </div>
             </div>
             <div class="form-group">
+                <label for="templatePriority">Priority</label>
+                <select id="templatePriority">
+                    <option value="1">High</option>
+                    <option value="2" selected>Medium</option>
+                    <option value="3">Low</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Preview (Next 5 occurrences)</label>
                 <div id="cronPreview" class="cron-preview">
                     Enter a cron expression to see preview
@@ -186,6 +194,9 @@
                 <div class="template-schedule">
                     <span class="schedule-label">Schedule:</span>
                     <code>${escapeHtml(template.cron_schedule)}</code>
+                    <span class="priority-indicator priority-${template.priority || 2}">
+                        ${template.priority === 1 ? 'High' : template.priority === 3 ? 'Low' : 'Medium'}
+                    </span>
                     <span class="schedule-status ${template.is_active ? 'active' : 'paused'}">${template.is_active ? 'Active' : 'Paused'}</span>
                 </div>
                 <div class="template-dates">
@@ -214,6 +225,7 @@
         document.getElementById('cronExpression').value = '';
         document.getElementById('templateStartDate').value = '';
         document.getElementById('templateEndDate').value = '';
+        document.getElementById('templatePriority').value = '2';
         document.getElementById('cronPreview').innerHTML = 'Enter a cron expression to see preview';
         document.getElementById('templateModal').classList.add('active');
     }
@@ -229,6 +241,7 @@
                 document.getElementById('cronExpression').value = template.cron_schedule;
                 document.getElementById('templateStartDate').value = template.start_date || '';
                 document.getElementById('templateEndDate').value = template.end_date || '';
+                document.getElementById('templatePriority').value = template.priority || '2';
                 previewCron();
                 document.getElementById('templateModal').classList.add('active');
             });
@@ -249,6 +262,7 @@
             title: document.getElementById('templateTitle').value,
             description: document.getElementById('templateDescription').value,
             cron_schedule: document.getElementById('cronExpression').value,
+            priority: parseInt(document.getElementById('templatePriority').value),
             start_date: startDate || null,
             end_date: endDate || null,
             is_active: true
@@ -267,15 +281,16 @@
             closeTemplateModal();
             loadTemplates();
             
-            // Regenerate tasks for this template
-            if (id) {
-                // If editing, regenerate future tasks
-                fetch(`/api/templates/${id}/regenerate`, { method: 'POST' })
-                    .then(() => console.log('Tasks regenerated'));
-            } else {
-                // If new, generate tasks for it
-                generateRecurringTasks();
-            }
+            // After saving, regenerate tasks for this template
+            // This handles schedule changes by deleting and recreating future tasks
+            // Note: title/description/priority are already synced to existing tasks by the API
+            const templateId = id || savedTemplate.id;
+            fetch(`/api/templates/${templateId}/regenerate`, { method: 'POST' })
+                .then(response => response.json())
+                .then(result => {
+                    console.log(`Tasks synced: ${result.deleted || 0} deleted, ${result.regenerated || 0} regenerated`);
+                })
+                .catch(error => console.error('Error regenerating tasks:', error));
         })
         .catch(error => {
             console.error('Error saving template:', error);
@@ -291,12 +306,18 @@
     }
     
     function deleteTemplate(id) {
-        if (!confirm('Are you sure you want to delete this template? Generated tasks will not be removed.')) {
+        const choice = confirm('Delete this template?\n\nClick OK to delete the template AND all its future tasks (today and beyond).\nClick Cancel to keep everything.');
+        
+        if (!choice) {
             return;
         }
         
-        fetch(`/api/templates/${id}`, { method: 'DELETE' })
-            .then(() => loadTemplates())
+        // Delete template with future tasks
+        fetch(`/api/templates/${id}?delete_tasks=future`, { method: 'DELETE' })
+            .then(() => {
+                loadTemplates();
+                alert('Template and its future tasks have been deleted.');
+            })
             .catch(error => console.error('Error deleting template:', error));
     }
     

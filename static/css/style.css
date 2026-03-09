@@ -551,6 +551,30 @@ body {
     font-style: italic;
 }
 
+.priority-indicator {
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.priority-indicator.priority-1 {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.priority-indicator.priority-2 {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.priority-indicator.priority-3 {
+    background: #d1fae5;
+    color: #047857;
+}
+
 .empty-state {
     text-align: center;
     padding: 3rem;

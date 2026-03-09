@@ -67,6 +67,7 @@ def generate_tasks_for_range(start_date, end_date):
                     description=template.description,
                     due_date=occurrence.date(),
                     due_time=occurrence.time(),
+                    priority=template.priority,
                     template_id=template.id
                 )
                 db.session.add(task)

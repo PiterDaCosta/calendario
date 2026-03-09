@@ -11,6 +11,7 @@ class TaskTemplate(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     cron_schedule = db.Column(db.String(100), nullable=False)  # Cron expression
+    priority = db.Column(db.Integer, default=2)  # 1=High, 2=Medium, 3=Low
     start_date = db.Column(db.Date, nullable=True)  # When recurrence starts (null = no limit)
     end_date = db.Column(db.Date, nullable=True)    # When recurrence ends (null = no limit)
     is_active = db.Column(db.Boolean, default=True)
@@ -67,6 +68,7 @@ class TaskTemplate(db.Model):
             'title': self.title,
             'description': self.description,
             'cron_schedule': self.cron_schedule,
+            'priority': self.priority,
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'is_active': self.is_active,

@@ -149,6 +149,7 @@ def create_template():
         title=data['title'],
         description=data.get('description', ''),
         cron_schedule=data['cron_schedule'],
+        priority=data.get('priority', 2),
         start_date=datetime.fromisoformat(data['start_date']).date() if data.get('start_date') else None,
         end_date=datetime.fromisoformat(data['end_date']).date() if data.get('end_date') else None,
         is_active=data.get('is_active', True)
@@ -169,7 +170,7 @@ def get_template(template_id):
 
 @api_bp.route('/templates/<int:template_id>', methods=['PUT'])
 def update_template(template_id):
-    """Update a template"""
+    """Update a template and sync changes to all future associated tasks"""
     template = TaskTemplate.query.get_or_404(template_id)
     data = request.get_json()
     
@@ -179,6 +180,8 @@ def update_template(template_id):
         template.description = data['description']
     if 'cron_schedule' in data:
         template.cron_schedule = data['cron_schedule']
+    if 'priority' in data:
+        template.priority = data['priority']
     if 'start_date' in data:
         template.start_date = datetime.fromisoformat(data['start_date']).date() if data['start_date'] else None
     if 'end_date' in data:
@@ -186,14 +189,41 @@ def update_template(template_id):
     if 'is_active' in data:
         template.is_active = data['is_active']
     
+    # Update all future tasks (today and beyond) associated with this template
+    today = date.today()
+    Task.query.filter(
+        Task.template_id == template_id,
+        Task.due_date >= today
+    ).update({
+        'title': template.title,
+        'description': template.description,
+        'priority': template.priority
+    })
+    
     db.session.commit()
     return jsonify(template.to_dict())
 
 
 @api_bp.route('/templates/<int:template_id>', methods=['DELETE'])
 def delete_template(template_id):
-    """Delete a template"""
+    """Delete a template and optionally its associated tasks"""
     template = TaskTemplate.query.get_or_404(template_id)
+    today = date.today()
+    
+    # Check if we should delete associated tasks
+    delete_tasks = request.args.get('delete_tasks', 'future')
+    
+    if delete_tasks == 'all':
+        # Delete all tasks from this template
+        Task.query.filter(Task.template_id == template_id).delete()
+    elif delete_tasks == 'future':
+        # Delete only future tasks (today and beyond) from this template
+        Task.query.filter(
+            Task.template_id == template_id,
+            Task.due_date >= today
+        ).delete()
+    # If delete_tasks == 'none', don't delete any tasks
+    
     db.session.delete(template)
     db.session.commit()
     return '', 204
@@ -210,24 +240,46 @@ def toggle_template(template_id):
 
 @api_bp.route('/templates/<int:template_id>/regenerate', methods=['POST'])
 def regenerate_template_tasks(template_id):
-    """Regenerate future tasks for a template after it's been updated"""
+    """Regenerate future tasks for a specific template after it's been updated"""
     template = TaskTemplate.query.get_or_404(template_id)
     
-    # Delete future incomplete tasks for this template
+    # Delete future tasks for this template (today and beyond)
     today = date.today()
-    Task.query.filter(
+    deleted_count = Task.query.filter(
         Task.template_id == template_id,
-        Task.due_date >= today,
-        Task.is_completed == False
+        Task.due_date >= today
     ).delete()
     db.session.commit()
     
-    # Regenerate tasks for the next 30 days
-    from app.scheduler import generate_tasks_for_range
-    end_date = datetime.now() + timedelta(days=30)
-    count = generate_tasks_for_range(datetime.now(), end_date)
+    # Regenerate tasks for this template only for the next 30 days
+    if not template.is_active:
+        return jsonify({'deleted': deleted_count, 'regenerated': 0})
     
-    return jsonify({'regenerated': count})
+    end_date = datetime.now() + timedelta(days=30)
+    occurrences = template.get_occurrences_in_range(datetime.now(), end_date)
+    generated_count = 0
+    
+    for occurrence in occurrences:
+        # Check if task already exists for this template and date
+        existing = Task.query.filter_by(
+            template_id=template.id,
+            due_date=occurrence.date()
+        ).first()
+        
+        if not existing:
+            task = Task(
+                title=template.title,
+                description=template.description,
+                due_date=occurrence.date(),
+                due_time=occurrence.time(),
+                priority=template.priority,
+                template_id=template.id
+            )
+            db.session.add(task)
+            generated_count += 1
+    
+    db.session.commit()
+    return jsonify({'deleted': deleted_count, 'regenerated': generated_count})
 
 
 @api_bp.route('/templates/presets', methods=['GET'])
